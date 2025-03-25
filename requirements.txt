@@ -1,0 +1,8 @@
+pymupdf
+pymupdf[simplify]
+pdfplumber
+transformers
+torch
+nltk
+pillow
+bitsandbytes
