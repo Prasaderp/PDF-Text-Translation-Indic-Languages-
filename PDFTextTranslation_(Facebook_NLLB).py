@@ -9,14 +9,19 @@ import os
 MODEL_NAME = "facebook/nllb-200-3.3B"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LANGUAGES = {
-    "Hindi": {"code": "hin_Deva", "iso": "hi", "digits": "०१२३४५६७८९"},
-    "Tamil": {"code": "tam_Taml", "iso": "ta", "digits": "௦௧௨௩௪௫௬௭௮௯"},
-    "Telugu": {"code": "tel_Telu", "iso": "te", "digits": "౦౧౨౩౪౫౬౭౮౯"}
+    "Hindi": {"code": "hin_Deva", "iso": "hi"},
+    "Tamil": {"code": "tam_Taml", "iso": "ta"},
+    "Telugu": {"code": "tel_Telu", "iso": "te"}
 }
 MAX_LENGTH_DEFAULT = 256
 MEMORY_THRESHOLD = 0.8
 
-# Digit mappings
+# Digit mappings for Hindi, Tamil, and Telugu
+DIGIT_MAP = {
+    "Hindi": "०१२३४५६७८९",  # Hindi Devanagari digits
+    "Tamil": "௦௧௨௩௪௫௬௭௮௯",  # Tamil digits
+    "Telugu": "౦౧౨౩౪౫౬౭౮౯"  # Telugu digits
+}
 LATIN_DIGITS = "0123456789"
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -45,6 +50,7 @@ def replace_with_placeholders(text, entities):
     placeholder_map = {}
     modified_text = text
 
+    # Automatic patterns (emails and URLs only)
     patterns = [
         (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), "emails"),
         (re.compile(r'https?://\S+|www\.\S+'), "URLs")
@@ -57,6 +63,7 @@ def replace_with_placeholders(text, entities):
             placeholder_map[placeholder] = match
             modified_text = modified_text.replace(match, placeholder)
 
+    # User-specified entities
     for entity in entities:
         pattern = re.compile(r'\b' + re.escape(entity) + r'\b', re.IGNORECASE)
         def replacer(match):
@@ -71,9 +78,9 @@ def replace_with_placeholders(text, entities):
     print(f"🔍 Modified text with placeholders: '{modified_text}'")
     return modified_text, placeholder_map
 
-def convert_numbers_to_script(text, language):
+def convert_numbers_to_script(text, target_language):
     """Convert Latin digits to the target language's numeral script."""
-    digit_map = LANGUAGES[language]["digits"]
+    digit_map = DIGIT_MAP[target_language]
     def replace_digit(match):
         number = match.group(0)
         converted = ''.join(digit_map[int(d)] if d in LATIN_DIGITS else d for d in number)
@@ -205,7 +212,6 @@ def split_block_into_subblocks(block):
         return []
     subblocks = []
     current_subblock = None
-    max_words_per_subblock = 50
 
     for i, line in enumerate(lines):
         text = line["text"].strip()
@@ -218,11 +224,9 @@ def split_block_into_subblocks(block):
         if current_subblock is None:
             current_subblock = {"text": text, "lines": [line], "font_size": font_size}
         else:
-            current_words = current_subblock["text"].split()
-            new_words = text.split()
+            # Split only on significant changes to preserve paragraph-like structure
             if (font_size != current_subblock["font_size"] or
-                len(current_words + new_words) > max_words_per_subblock or
-                gap > font_size * 1.0 or
+                gap > font_size * 1.5 or  # Increased threshold for paragraph breaks
                 x_shift > 10):
                 subblocks.append(current_subblock)
                 current_subblock = {"text": text, "lines": [line], "font_size": font_size}
@@ -283,8 +287,8 @@ def estimate_text_height(text, bbox_width, bbox_height, initial_font_size, fontn
     if not text.strip():
         return initial_font_size
 
-    min_font_size = 5
-    step = 0.5
+    min_font_size = 5  # Minimum readable font size
+    step = 0.5  # Font size adjustment step
 
     def calculate_height(font_size):
         lines = []
@@ -334,7 +338,7 @@ def estimate_text_height(text, bbox_width, bbox_height, initial_font_size, fontn
     return max(min_font_size, min(initial_font_size, font_size))
 
 # Rebuild PDF with layout preservation and font size adjustment
-def rebuild_pdf(components, output_path, original_pdf_path, target_language, use_white_background=False):
+def rebuild_pdf(components, output_path, original_pdf_path, target_language, use_white_background=True):
     print(f"\n🏗️ Rebuilding {target_language} PDF...")
     doc = fitz.open(original_pdf_path)
     lang_iso = LANGUAGES[target_language]["iso"]
@@ -392,16 +396,22 @@ def rebuild_pdf(components, output_path, original_pdf_path, target_language, use
 
 # Main execution
 if __name__ == "__main__":
-    pdf_path = "/content/JIVAA Newsletter for February 2025 (2) 06.03.2025.pdf"
+    pdf_path = "/content/FINAL REPORT-IIP (Prasad Somvanshi).pdf"
+    print("\n" + "="*40)
+    print("🌐 Select target language (Hindi, Tamil, Telugu):")
+    while True:
+        target_language = input().strip().capitalize()
+        if target_language in LANGUAGES:
+            break
+        print("❌ Invalid choice. Please enter 'Hindi', 'Tamil', or 'Telugu'.")
+    
     print("\n" + "="*40)
     print("📝 Enter entities to preserve (comma-separated, e.g., 'Unni Jacobsen, Torstein Jahr, Suzanne Bolstad') (optional):")
     entities = parse_user_entities(input().strip())
+    
     print("\n" + "="*40)
-    print("🌐 Select target language (Hindi, Tamil, Telugu):")
-    target_language = input().strip().capitalize()
-    while target_language not in LANGUAGES:
-        print(f"❌ Invalid language. Please choose from: {', '.join(LANGUAGES.keys())}")
-        target_language = input().strip().capitalize()
+    print("🎨 Use white background for blocks? (yes/no):")
+    use_white = input().strip().lower() in ('yes', 'y', 'true', 't', '1')
 
     components = extract_pdf_components(pdf_path)
     total_pages = len(components)
@@ -420,6 +430,7 @@ if __name__ == "__main__":
             chunk = components[i:i + chunk_size]
             translate_chunk(chunk, entities, target_language, fast_mode=False)
             print(f"✅ Chunk {i // chunk_size + 1}/{num_chunks} translated ({len(chunk)} pages)")
+    
     output_path = f"/content/translated_{target_language.lower()}.pdf"
-    rebuild_pdf(components, output_path, pdf_path, target_language)
+    rebuild_pdf(components, output_path, pdf_path, target_language, use_white_background=use_white)
     print(f"\n✅ {target_language} translation completed in {time.time()-start_time:.2f}s")
