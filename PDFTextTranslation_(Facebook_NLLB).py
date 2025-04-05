@@ -396,7 +396,7 @@ def rebuild_pdf(components, output_path, original_pdf_path, target_language, use
 
 # Main execution
 if __name__ == "__main__":
-    pdf_path = "/content/FINAL REPORT-IIP (Prasad Somvanshi).pdf"
+    pdf_path = "/content/example.pdf"
     print("\n" + "="*40)
     print("🌐 Select target language (Hindi, Tamil, Telugu):")
     while True:
@@ -404,11 +404,11 @@ if __name__ == "__main__":
         if target_language in LANGUAGES:
             break
         print("❌ Invalid choice. Please enter 'Hindi', 'Tamil', or 'Telugu'.")
-    
+
     print("\n" + "="*40)
     print("📝 Enter entities to preserve (comma-separated, e.g., 'Unni Jacobsen, Torstein Jahr, Suzanne Bolstad') (optional):")
     entities = parse_user_entities(input().strip())
-    
+
     print("\n" + "="*40)
     print("🎨 Use white background for blocks? (yes/no):")
     use_white = input().strip().lower() in ('yes', 'y', 'true', 't', '1')
@@ -430,7 +430,7 @@ if __name__ == "__main__":
             chunk = components[i:i + chunk_size]
             translate_chunk(chunk, entities, target_language, fast_mode=False)
             print(f"✅ Chunk {i // chunk_size + 1}/{num_chunks} translated ({len(chunk)} pages)")
-    
+
     output_path = f"/content/translated_{target_language.lower()}.pdf"
     rebuild_pdf(components, output_path, pdf_path, target_language, use_white_background=use_white)
     print(f"\n✅ {target_language} translation completed in {time.time()-start_time:.2f}s")
