@@ -1,10 +1,6 @@
-pymupdf
-pymupdf[simplify]
-pdfplumber
+PyMuPDF
+PyMuPDF[simplify]
 transformers
 torch
-nltk
-pillow
-bitsandbytes
-sentencepiece 
+sentencepiece
 accelerate

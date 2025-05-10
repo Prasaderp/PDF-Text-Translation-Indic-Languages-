@@ -6,38 +6,46 @@
 ![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97-HuggingFace-yellow)
 ![PDF](https://img.shields.io/badge/PDF-Processing-red)
 
-## 🌟 Key Features
-- **Format-Preserving Translation** - Maintains original PDF layout and formatting
-- **Multi-Language Support** - Hindi (`hi`), Tamil (`ta`), Telugu (`te`) 
-- **Entity Preservation** - Protect names, brands, and special terms
-- **GPU Optimization** - Dynamic batch sizing and memory management
-- **PDF Reconstruction** - Native PDF text replacement with language tagging
+## Key Features
+- **Format-Preserving Translation**: Maintains original PDF layout and formatting.
+- **Multi-Language Support**: Translates to Hindi (`hin_Deva`), Tamil (`tam_Taml`), and Telugu (`tel_Telu`).
+- **Smart Entity Handling**: Preserves user-defined terms, names, brands, and automatically protects email addresses and URLs during translation.
+- **Numeric Script Conversion**: Automatically converts Latin numbers to the target language's native numeral script (e.g., Devanagari, Tamil, Telugu digits).
+- **GPU Optimization & Adaptive Modes**: Features dynamic batch sizing for efficient processing, GPU memory management to handle large files, and adaptive translation modes (fast for short documents, quality-focused for longer ones).
+- **PDF Reconstruction**: Rebuilds the PDF with translated text, aiming to preserve the original appearance and tagging text with the correct language.
 
-## 🛠️ Installation
+## Installation
 ```bash
 pip install -r requirements.txt
-
-Requirements:
-PyMuPDF==1.23.8
-torch==2.2.1
-transformers==4.39.3
-regex==2023.12.25
 ```
 
-## 🚀 Usage
+## Usage
 
-### Sample Execution Flow
-```Enter entities to preserve (comma-separated): NASA, SpaceX, Elon Musk
-Available languages: Hindi, Tamil, Telugu
-Enter target languages: Hindi, Tamil
-Use white background for blocks? (yes/no): yes
+First, ensure you have Python installed and the required dependencies from `requirements.txt`.
+
+Run the main script from your terminal:
+```bash
+python main.py
 ```
 
-[SYSTEM] Processing 10-page PDF...
-✅ Hindi translation completed in 4m 28s
-✅ Tamil translation completed in 5m 12s
+The script will then guide you through the following prompts:
 
-## 🧠 Architecture
+```
+Enter path to your PDF file: /path/to/your/document.pdf
+========================================
+Select target language (Hindi, Tamil, Telugu):
+Hindi
+========================================
+Enter entities to preserve (comma-separated, e.g., 'Unni Jacobsen, Torstein Jahr, Suzanne Bolstad') (optional):
+NASA, Project Gemini
+========================================
+Use white background for blocks? (yes/no):
+yes
+```
+This will generate a new PDF named `translated_[language].pdf` (Note: the script currently saves to `/content/translated_[language].pdf`; you might want to adjust the `output_path` in `main.py` or the `pdf_path` variable for a different location).
+
+## Architecture
+The project is now structured into several Python modules for better organization and maintainability (e.g., `config.py`, `model_loader.py`, `text_utils.py`, `pdf_processor.py`, `translator.py`, `memory_utils.py`, `pdf_builder.py`, and `main.py`). The core translation flow remains:
 ```bash
 graph TD
     A[PDF Input] --> B[Text Extraction]
@@ -49,7 +57,8 @@ graph TD
     E --> F[PDF Reconstruction]
     F --> G[Translated PDF
 ```
-## ⚙️ Configuration
+## Configuration
+Key configurations for the model, device, languages, and memory thresholds are centralized in `config.py`.
 
 ### Model Configuration
 ```
@@ -66,7 +75,7 @@ LANGUAGES = {
 }
 ```
 
-## 📊 Performance
+## Performance
 Metric	Value
 Pages/Min (CPU)	0.8
 Pages/Min (GPU)	3.2
@@ -80,7 +89,7 @@ Translated Hindi (हिन्दी):
 ```"स्पेसएक्स का स्टारशिप रॉकेट मंगल बसाने के लिए बनाया गया है"```
 Translated PDF Preview
 
-## 🤝 Credits
+## Credits
 NLLB-200 Model - Meta AI Research
 PDF Engine - Artifex PyMuPDF
 Translation Core - HuggingFace Transformers
